@@ -79,7 +79,7 @@ This is the same grain as the source `sales_transactions.csv` no aggregation hap
 - **Load order:** all five dimensions are loaded and their surrogate keys generated **before** `FactSales`, since every fact row needs all five FKs resolved (`load_dimensions.py` → `load_fact.py`).
 - `FactSales` is keyed by `sale_line_id`, which is unique per row and enforces the declared grain.
 
-## 6. Pipeline Diagram
+## 7. Pipeline Diagram
 
 ![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
 
