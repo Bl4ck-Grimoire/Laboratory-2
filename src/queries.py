@@ -82,8 +82,33 @@ def run_all(conn):
 
 
 def print_results(results):
+    def format_value(v):
+        if isinstance(v, (int, float)):
+            s = f"{v:,.2f}"
+            s = s.replace(",", "X").replace(".", ",").replace("X", ".")
+            return s
+        return str(v)
+
     for key, (title, columns, rows) in results.items():
-        print(f"\n=== {title} ===")
-        print(" | ".join(columns))
-        for row in rows:
-            print(" | ".join(str(v) for v in row))
+        print(f"\n---------- {title} ----------")
+
+        # Formatear filas
+        formatted_rows = [[format_value(v) for v in row] for row in rows]
+
+        # Calcular anchos de columna dinámicamente
+        col_widths = []
+        for i, col in enumerate(columns):
+            max_width = len(col)
+            for row in formatted_rows:
+                max_width = max(max_width, len(row[i]))
+            col_widths.append(max_width)
+
+        # Imprimir encabezados
+        header = " | ".join(col.ljust(col_widths[i]) for i, col in enumerate(columns))
+        separator = "-+-".join("-" * col_widths[i] for i in range(len(columns)))
+        print(header)
+        print(separator)
+
+        # Imprimir filas
+        for row in formatted_rows:
+            print(" | ".join(row[i].ljust(col_widths[i]) for i in range(len(row))))

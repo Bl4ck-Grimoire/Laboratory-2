@@ -56,7 +56,7 @@ def main():
 
     # 6. VALIDATE
     results = run_all(conn)
-    print("\n[VALIDATE] Part F — requirement-based queries:")
+    print("\n[VALIDATE] Requirement-based queries:")
     print_results(results)
 
     conn.close()
