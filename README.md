@@ -1,12 +1,12 @@
-# LAB-2 — From Business Requirements to a Dimensional Data Warehouse
+# Lab 2 : From Business Requirements to a Dimensional Data Warehouse
 
-**Course:** ETL (G01) — Data Engineering and Artificial Intelligence, Universidad Autónoma de Occidente
+`Johann Eduardo Gonzales Sandoval` `Juan David Lasso Chaparro`
 
 ## 1. Project Objective and Business Scenario
 
-The objective of this lab is **not** to build a complex ETL pipeline, but to translate a set of business requirements into a correct **dimensional model**, implement it as a Star Schema in SQLite, load it in the right order, and prove — through SQL queries and two visualizations — that the model actually supports the analytical questions it was designed for.
+The objective of this lab is not to build a complex ETL pipeline, but to translate a set of business requirements into a correct dimensional model, implement it as a Star Schema in SQLite, load it in the right order, and prove through SQL queries and two visualizations that the model actually supports the analytical questions it was designed for.
 
-**Business scenario:** a retail technology company operates two physical stores (Cali Centro, Bogota Norte) and one national online store (Online Colombia). Management wants to consolidate six months of sales data (January–June 2026, 1,000 sales lines) into a Data Warehouse that supports recurring analytical queries and future dashboards — without simply copying every source field into the warehouse.
+**Business scenario:** a retail technology company operates two physical stores and one national online store. Management wants to consolidate six months of sales data into a Data Warehouse that supports recurring analytical queries and future dashboards without simply copying every source field into the warehouse.
 
 ## 2. Business Requirements
 
@@ -22,26 +22,22 @@ The objective of this lab is **not** to build a complex ETL pipeline, but to tra
 
 | ID | Analytical Question | Required Data | Expected KPI / Query |
 |----|---------------------|----------------|------------------------|
-| **R1** | How do net sales evolve month over month, and in which months do sales grow or decline? | `DimDate` (month, month_name, year) + `FactSales.net_sales` | **Monthly Net Sales Trend** — `SUM(net_sales)` grouped by year/month, ordered chronologically, with month-over-month % change |
-| **R2** | Which stores and which sales channels generate the most net sales and units, and how does this vary over time? | `DimStore` (store_name, city, region) + `DimChannel` (channel_name) + `DimDate` (month) + `FactSales.net_sales`, `quantity` | **Sales by Store and Channel (optionally by month)** — `SUM(net_sales)`, `SUM(quantity)` grouped by store_name, channel_name, [month] |
-| **R3** | Which product categories and brands generate the highest revenue and units sold? | `DimProduct` (category, brand) + `FactSales.net_sales`, `quantity` | **Top Categories / Brands** — `SUM(net_sales)`, `SUM(quantity)` grouped by category, brand, ranked descending |
-| **R4** | How do sales, units, and discount amounts differ across promotion types (including no-promotion sales)? | `DimPromotion` (promotion_name, discount_pct) + `FactSales.net_sales`, `quantity`, `discount_amount` | **Promotion Performance Comparison** — `SUM(net_sales)`, `SUM(quantity)`, `SUM(discount_amount)` grouped by promotion_name |
-| **R5** | What gross profit and gross margin does each product category, store, and month generate? | `DimProduct` (category) + `DimStore` (store_name) + `DimDate` (month) + `FactSales.net_sales`, `cost_amount` | **Gross Profit & Gross Margin by Category/Store/Month** — `SUM(gross_profit)` and `SUM(gross_profit)/SUM(net_sales)*100` grouped by category, store_name, month |
+| **R1** | How do net sales evolve month over month, and in which months do sales grow or decline? | `DimDate` (month, month_name, year) + `FactSales.net_sales` | **Monthly Net Sales Trend**  `SUM(net_sales)` grouped by year/month, ordered chronologically, with month-over-month % change |
+| **R2** | Which stores and which sales channels generate the most net sales and units, and how does this vary over time? | `DimStore` (store_name, city, region) + `DimChannel` (channel_name) + `DimDate` (month) + `FactSales.net_sales`, `quantity` | **Sales by Store and Channel**  `SUM(net_sales)`, `SUM(quantity)` grouped by store_name, channel_name, [month] |
+| **R3** | Which product categories and brands generate the highest revenue and units sold? | `DimProduct` (category, brand) + `FactSales.net_sales`, `quantity` | **Top Categories / Brands**  `SUM(net_sales)`, `SUM(quantity)` grouped by category, brand, ranked descending |
+| **R4** | How do sales, units, and discount amounts differ across promotion types (including no-promotion sales)? | `DimPromotion` (promotion_name, discount_pct) + `FactSales.net_sales`, `quantity`, `discount_amount` | **Promotion Performance Comparison**  `SUM(net_sales)`, `SUM(quantity)`, `SUM(discount_amount)` grouped by promotion_name |
+| **R5** | What gross profit and gross margin does each product category, store, and month generate? | `DimProduct` (category) + `DimStore` (store_name) + `DimDate` (month) + `FactSales.net_sales`, `cost_amount` | **Gross Profit & Gross Margin by Category/Store/Month**  `SUM(gross_profit)` and `SUM(gross_profit)/SUM(net_sales)*100` grouped by category, store_name, month |
 
-## 3. System Architecture / Pipeline Diagram
+## 3. Pipeline Diagram
 
-Conceptual flow (Section 6 of the guide): `Business Requirements → Source Data → ETL → Dimensional Model → SQL/KPIs → Business Decisions`.
-
-![ETL Pipeline Diagram](docs/pipeline_diagram.png)
-
-An editable version is available at `docs/pipeline_diagram.drawio` (open with diagrams.net / app.diagrams.net).
+![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
 
 ## 4. Business Process and Fact Table Grain
 
 - **Business process:** Retail Sales — transactions across two physical stores and one national online channel, covering products sold, promotions applied, and the dates on which sales occurred, over a six-month period.
-- **Fact table grain:** **One row in `FactSales` represents one product line item (`sale_line_id`) sold as part of one sales transaction, at one store, through one sales channel, on one date, under one promotion condition (including "no promotion").**
+- **Fact table grain:** One row in `FactSales` represents one product line item (`sale_line_id`) sold as part of one sales transaction, at one store, through one sales channel, on one date, under one promotion condition.
 
-This is the same grain as the source `sales_transactions.csv` — no aggregation happens during load, which keeps every requirement (R1–R5) answerable with a plain `GROUP BY`.
+This is the same grain as the source `sales_transactions.csv` — no aggregation happens during load, which keeps every requirement answerable with a plain `GROUP BY`.
 
 ## 5. Star Schema Diagram and Design Justification
 
@@ -49,9 +45,9 @@ This is the same grain as the source `sales_transactions.csv` — no aggregation
 
 **Why these 5 dimensions and no more:**
 - `DimDate`, `DimProduct`, `DimStore` and `DimPromotion` are the direct target of R1, R3, R4 and R5.
-- `DimChannel` was added as its **own** dimension (not folded into `DimStore`) because `channel_id` already arrives as an independent field on every sales line in the source CSV, and R2 explicitly asks to compare "stores **and** channels."
-- No `DimCustomer` was created — no requirement references customer-level analysis, and adding it would violate the guide's design rule ("driven by requirements, not by available columns").
-- `list_price` and `unit_cost` from `reference_data.json` are **not** stored in `DimProduct`: they are only inputs used once, at load time, to calculate `gross_sales` and `cost_amount` — nobody queries or slices by them directly.
+- `DimChannel` was added as its own dimension because `channel_id` already arrives as an independent field on every sales line in the source CSV, and R2 explicitly asks to compare "stores and channels."
+- No `DimCustomer` was created — no requirement references customer-level analysis, and adding it would violate the guide's design rule.
+- `list_price` and `unit_cost` from `reference_data.json` are not stored in `DimProduct`: they are only inputs used once, at load time, to calculate `gross_sales` and `cost_amount` — nobody queries or slices by them directly.
 
 ## 6. Dimensions, Facts, and Measures
 
@@ -61,7 +57,7 @@ This is the same grain as the source `sales_transactions.csv` — no aggregation
 | `DimProduct` | R3, R5 | `product_key` (PK), `product_id`, `product_name`, `category`, `brand` |
 | `DimStore` | R2, R5 | `store_key` (PK), `store_id`, `store_name`, `city`, `region` |
 | `DimChannel` | R2 | `channel_key` (PK), `channel_id`, `channel_name` |
-| `DimPromotion` | R4 | `promotion_key` (PK), `promotion_id`, `promotion_name`, `discount_pct` (includes a "No Promotion" member so the FK is never null) |
+| `DimPromotion` | R4 | `promotion_key` (PK), `promotion_id`, `promotion_name`, `discount_pct` |
 
 `FactSales` measures:
 
@@ -73,9 +69,9 @@ This is the same grain as the source `sales_transactions.csv` — no aggregation
 | `discount_amount` | `gross_sales − net_sales` | Fully additive |
 | `cost_amount` | `quantity × unit_cost` | Fully additive |
 | `gross_profit` | `net_sales − cost_amount` | Fully additive |
-| *gross_margin_%* | `gross_profit / net_sales × 100` | **Not stored** — non-additive ratio, calculated at query time only (R5) |
+| *gross_margin_%* | `gross_profit / net_sales × 100` | Not stored — non-additive ratio, calculated at query time only |
 
-`sale_line_id` and `transaction_id` are kept in `FactSales` as **degenerate dimensions** (traceability to the source, no separate table).
+`sale_line_id` and `transaction_id` are kept in `FactSales` as degenerate dimensions.
 
 ## 7. Load Order and Surrogate-Key Strategy
 
@@ -88,22 +84,24 @@ This is the same grain as the source `sales_transactions.csv` — no aggregation
 
 ```bash
 # 1. Clone the repository and enter it
-git clone <repo-url>
-cd lab2-dimensional-dw
+git clone https://github.com/Bl4ck-Grimoire/Laboratory-2
+cd Laboratory-2
 
-# 2. Install the only external dependency (matplotlib, for Part G)
+# 2. Create a virtual enviroment
+python -m venv .venv
+.venv\Scripts\activate
+
+# 3. Install the only external dependency
 pip install -r requirements.txt
 
-# 3. Build the schema, load dimensions + fact, and run the Part F queries
-python3 src/main.py
+# 4. Run the project
+python src/main.py
 
-# 4. Generate the two Part G charts (run after main.py, since it reads database/retail_dw.db)
-python3 src/generate_visualizations.py
+# 5. Generate the charts
+python3src/generate_visualizations.py
 ```
 
-Re-running `main.py` is safe — `create_schema.py` drops and recreates every table before reloading.
-
-## 9. SQL Queries / KPIs Mapped to Business Requirements (Part F)
+## 9. SQL Queries / KPIs Mapped to Business Requirements
 
 **R1 — Monthly Net Sales Trend**
 ```sql
@@ -167,28 +165,25 @@ LIMIT 15;
 
 Both charts are built from SQL queries against `database/retail_dw.db` — never from the raw source files.
 
-**Visualization 1 — R1 (temporal requirement): Monthly Net Sales Trend**
+**Temporal requirement — R1: Monthly Net Sales Trend**
 
 ![Monthly Net Sales Trend](docs/viz1_monthly_net_sales_trend.png)
 
 *Interpretation:* net sales grow steadily from January (~174M COP) to May (~269M COP), then dip slightly in June (~262M COP). A line chart was chosen because R1 is about a trend over time, not a comparison between discrete categories.
 
-**Visualization 2 — R3 (comparative requirement): Net Sales by Product Category**
+**Comparative requirement — R3: Net Sales by Product Category**
 
 ![Net Sales by Product Category](docs/viz2_top_categories_brands.png)
 
-*Interpretation:* Computers is the leading category by net sales (~606M COP), followed by Mobile Devices (~460M), Accessories (~220M), and Smart Home (~108M). A horizontal bar chart was chosen because R3 is a ranking task across discrete categories, and horizontal bars keep the category labels fully readable.
+*Interpretation:* Computers is the leading category by net sales, followed by Mobile Devices, Accessories, and Smart Home. A horizontal bar chart was chosen because R3 is a ranking task across discrete categories, and horizontal bars keep the category labels fully readable.
 
 ## 11. Final Reflection
 
 **How did the business requirements influence the dimensional model?**
-Every dimension and measure exists because at least one requirement needed it, not because the source files offered it. `DimChannel` exists only because R2 explicitly asks to compare channels; `cost_amount` and `gross_profit` exist only because R5 asks for margin. Conversely, fields the requirements never asked about — `list_price`, `unit_cost` as standalone attributes, any customer information — were deliberately left out of the dimensions, even though they were available in the source.
+Every dimension and measure exists because at least one requirement needed it. `DimChannel` exists only because R2 explicitly asks to compare channels; `cost_amount` and `gross_profit` exist only because R5 asks for margin. Conversely, fields the requirements never asked about  `list_price`, `unit_cost` as standalone attributes, any customer information were deliberately left out of the dimensions, even though they were available in the source.
 
 **What would be the impact of choosing an incorrect grain?**
-Choosing a coarser grain (e.g., one row per transaction, or pre-aggregated by store/day) would have permanently discarded detail needed by R3, R4, and R5: a single transaction can span multiple product categories and promotion conditions, so aggregating before loading would make it impossible to attribute net sales, cost, or discount to the correct category, brand, or promotion after the fact. Aggregating up from an atomic grain is always possible with `GROUP BY`; recovering detail from an already-aggregated grain is not.
+Choosing a coarser grain would have permanently discarded detail needed by R3, R4, and R5: a single transaction can span multiple product categories and promotion conditions, so aggregating before loading would make it impossible to attribute net sales, cost, or discount to the correct category, brand, or promotion after the fact. Aggregating up from an atomic grain is always possible with `GROUP BY`; recovering detail from an already-aggregated grain is not.
 
 **Did the final model contain any table or attribute not necessary for the selected requirements?**
-No new dimension or measure was added beyond what R1–R5 required. Two conscious exclusions are worth naming: `list_price` and `unit_cost` were kept out of `DimProduct` (they're load-time inputs, not attributes anyone slices by), and `gross_margin_%` was kept out of `FactSales` entirely, since it is a non-additive ratio that must be computed at query time to remain correct under aggregation.
-
----
-*Think in Systems. Build Data Solutions. Create Value.*
+No new dimension or measure was added beyond what R1–R5 required. Two conscious exclusions are worth naming: `list_price` and `unit_cost` were kept out of `DimProduct`, and `gross_margin_%` was kept out of `FactSales` entirely, since it is a non-additive ratio that must be computed at query time to remain correct under aggregation.
