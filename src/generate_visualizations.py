@@ -10,7 +10,7 @@ DOCS_DIR = os.path.join(BASE_DIR, "docs")
 
 
 def viz1_monthly_net_sales_trend(conn):
-    """R1 — temporal requirement -> line chart (best for a trend over time)."""
+    """R1  temporal requirement -> line chart (best for a trend over time)."""
     cur = conn.cursor()
     cur.execute(
         """
@@ -28,7 +28,7 @@ def viz1_monthly_net_sales_trend(conn):
     fig, ax = plt.subplots(figsize=(8, 4.5))
     ax.plot(labels, values, marker="o", linewidth=2, color="#2563eb")
     ax.fill_between(labels, values, alpha=0.08, color="#2563eb")
-    ax.set_title("R1 — Monthly Net Sales Trend (Jan–Jun 2026)", fontsize=13, weight="bold")
+    ax.set_title("R1  Monthly Net Sales Trend (Jan–Jun 2026)", fontsize=13, weight="bold")
     ax.set_xlabel("Month")
     ax.set_ylabel("Net Sales (COP)")
     ax.yaxis.set_major_formatter(lambda x, _: f"{x/1e6:.0f}M")
@@ -44,7 +44,7 @@ def viz1_monthly_net_sales_trend(conn):
 
 
 def viz2_top_categories_brands(conn):
-    """R3 — comparative requirement -> horizontal bar chart (best for ranking)."""
+    """R3  comparative requirement -> horizontal bar chart (best for ranking)."""
     cur = conn.cursor()
     cur.execute(
         """
@@ -61,7 +61,7 @@ def viz2_top_categories_brands(conn):
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     bars = ax.barh(categories, values, color="#0ea5a4")
-    ax.set_title("R3 — Net Sales by Product Category", fontsize=13, weight="bold")
+    ax.set_title("R3  Net Sales by Product Category", fontsize=13, weight="bold")
     ax.set_xlabel("Net Sales (COP)")
     ax.xaxis.set_major_formatter(lambda x, _: f"{x/1e6:.0f}M")
     ax.grid(axis="x", linestyle="--", alpha=0.4)

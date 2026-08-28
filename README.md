@@ -18,7 +18,7 @@ The objective of this lab is not to build a complex ETL pipeline, but to transla
 | **R4** | Evaluate promotion performance by comparing sales, units, and discounts across promotion types. |
 | **R5** | Analyze gross profit and gross margin by product category, store, and month. |
 
-**Requirements Traceability (Part A):**
+**Requirements Traceability:**
 
 | ID | Analytical Question | Required Data | Expected KPI / Query |
 |----|---------------------|----------------|------------------------|
@@ -28,28 +28,25 @@ The objective of this lab is not to build a complex ETL pipeline, but to transla
 | **R4** | How do sales, units, and discount amounts differ across promotion types (including no-promotion sales)? | `DimPromotion` (promotion_name, discount_pct) + `FactSales.net_sales`, `quantity`, `discount_amount` | **Promotion Performance Comparison**  `SUM(net_sales)`, `SUM(quantity)`, `SUM(discount_amount)` grouped by promotion_name |
 | **R5** | What gross profit and gross margin does each product category, store, and month generate? | `DimProduct` (category) + `DimStore` (store_name) + `DimDate` (month) + `FactSales.net_sales`, `cost_amount` | **Gross Profit & Gross Margin by Category/Store/Month**  `SUM(gross_profit)` and `SUM(gross_profit)/SUM(net_sales)*100` grouped by category, store_name, month |
 
-## 3. Pipeline Diagram
 
-![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
+## 3. Business Process and Fact Table Grain
 
-## 4. Business Process and Fact Table Grain
-
-- **Business process:** Retail Sales — transactions across two physical stores and one national online channel, covering products sold, promotions applied, and the dates on which sales occurred, over a six-month period.
+- **Business process:** Retail Sales transactions across two physical stores and one national online channel, covering products sold, promotions applied, and the dates on which sales occurred, over a six-month period.
 - **Fact table grain:** One row in `FactSales` represents one product line item (`sale_line_id`) sold as part of one sales transaction, at one store, through one sales channel, on one date, under one promotion condition.
 
-This is the same grain as the source `sales_transactions.csv` — no aggregation happens during load, which keeps every requirement answerable with a plain `GROUP BY`.
+This is the same grain as the source `sales_transactions.csv` no aggregation happens during load, which keeps every requirement answerable with a plain `GROUP BY`.
 
-## 5. Star Schema Diagram and Design Justification
+## 4. Star Schema Diagram and Design Justification
 
 ![Star Schema Diagram](docs/star-diagram.png)
 
 **Why these 5 dimensions and no more:**
 - `DimDate`, `DimProduct`, `DimStore` and `DimPromotion` are the direct target of R1, R3, R4 and R5.
 - `DimChannel` was added as its own dimension because `channel_id` already arrives as an independent field on every sales line in the source CSV, and R2 explicitly asks to compare "stores and channels."
-- No `DimCustomer` was created — no requirement references customer-level analysis, and adding it would violate the guide's design rule.
-- `list_price` and `unit_cost` from `reference_data.json` are not stored in `DimProduct`: they are only inputs used once, at load time, to calculate `gross_sales` and `cost_amount` — nobody queries or slices by them directly.
+- No `DimCustomer` was created  no requirement references customer-level analysis, and adding it would violate the guide's design rule.
+- `list_price` and `unit_cost` from `reference_data.json` are not stored in `DimProduct`: they are only inputs used once, at load time, to calculate `gross_sales` and `cost_amount`  nobody queries or slices by them directly.
 
-## 6. Dimensions, Facts, and Measures
+## 5. Dimensions, Facts, and Measures
 
 | Dimension | Requirement(s) Supported | Main Attributes |
 |---|---|---|
@@ -69,9 +66,13 @@ This is the same grain as the source `sales_transactions.csv` — no aggregation
 | `discount_amount` | `gross_sales − net_sales` | Fully additive |
 | `cost_amount` | `quantity × unit_cost` | Fully additive |
 | `gross_profit` | `net_sales − cost_amount` | Fully additive |
-| *gross_margin_%* | `gross_profit / net_sales × 100` | Not stored — non-additive ratio, calculated at query time only |
+| *gross_margin_%* | `gross_profit / net_sales × 100` | Not stored, calculated at query time only |
 
 `sale_line_id` and `transaction_id` are kept in `FactSales` as degenerate dimensions.
+
+## 6. Pipeline Diagram
+
+![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
 
 ## 7. Load Order and Surrogate-Key Strategy
 
@@ -103,7 +104,7 @@ python3src/generate_visualizations.py
 
 ## 9. SQL Queries / KPIs Mapped to Business Requirements
 
-**R1 — Monthly Net Sales Trend**
+**R1  Monthly Net Sales Trend**
 ```sql
 SELECT d.year, d.month, d.month_name, ROUND(SUM(f.net_sales), 2) AS net_sales
 FROM FactSales f
@@ -112,7 +113,7 @@ GROUP BY d.year, d.month
 ORDER BY d.year, d.month;
 ```
 
-**R2 — Net Sales & Quantity by Store and Channel**
+**R2  Net Sales & Quantity by Store and Channel**
 ```sql
 SELECT s.store_name, c.channel_name,
        SUM(f.quantity) AS units_sold,
@@ -124,7 +125,7 @@ GROUP BY s.store_name, c.channel_name
 ORDER BY net_sales DESC;
 ```
 
-**R3 — Top Categories and Brands by Revenue and Units**
+**R3  Top Categories and Brands by Revenue and Units**
 ```sql
 SELECT p.category, p.brand,
        SUM(f.quantity) AS units_sold,
@@ -135,7 +136,7 @@ GROUP BY p.category, p.brand
 ORDER BY net_sales DESC;
 ```
 
-**R4 — Promotion Performance (Sales, Units, Discount)**
+**R4  Promotion Performance (Sales, Units, Discount)**
 ```sql
 SELECT pr.promotion_name,
        SUM(f.quantity) AS units_sold,
@@ -147,7 +148,7 @@ GROUP BY pr.promotion_name
 ORDER BY net_sales DESC;
 ```
 
-**R5 — Gross Profit and Gross Margin % by Category, Store, Month**
+**R5  Gross Profit and Gross Margin % by Category, Store, Month**
 ```sql
 SELECT p.category, s.store_name, d.year, d.month,
        ROUND(SUM(f.gross_profit), 2) AS gross_profit,
@@ -161,17 +162,17 @@ ORDER BY gross_profit DESC
 LIMIT 15;
 ```
 
-## 10. Analytical Visualizations (Part G)
+## 10. Analytical Visualizations
 
-Both charts are built from SQL queries against `database/retail_dw.db` — never from the raw source files.
+Both charts are built from SQL queries against `database/retail_dw.db` never from the raw source files.
 
-**Temporal requirement — R1: Monthly Net Sales Trend**
+**Temporal requirement  R1: Monthly Net Sales Trend**
 
 ![Monthly Net Sales Trend](docs/viz1_monthly_net_sales_trend.png)
 
 *Interpretation:* net sales grow steadily from January (~174M COP) to May (~269M COP), then dip slightly in June (~262M COP). A line chart was chosen because R1 is about a trend over time, not a comparison between discrete categories.
 
-**Comparative requirement — R3: Net Sales by Product Category**
+**Comparative requirement  R3: Net Sales by Product Category**
 
 ![Net Sales by Product Category](docs/viz2_top_categories_brands.png)
 
