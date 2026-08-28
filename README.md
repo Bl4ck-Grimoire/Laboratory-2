@@ -70,16 +70,18 @@ This is the same grain as the source `sales_transactions.csv` no aggregation hap
 
 `sale_line_id` and `transaction_id` are kept in `FactSales` as degenerate dimensions.
 
-## 6. Pipeline Diagram
 
-![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
 
-## 7. Load Order and Surrogate-Key Strategy
+## 6. Load Order and Surrogate-Key Strategy
 
 - Every `Dim*` table uses a **surrogate integer primary key** (`*_key`), generated at load time, independent of the source system.
 - The original source identifier (`product_id`, `store_id`, `channel_id`, `promotion_id`) is kept as a **natural-key** attribute in each dimension, used only to map source rows to surrogate keys during load.
 - **Load order:** all five dimensions are loaded and their surrogate keys generated **before** `FactSales`, since every fact row needs all five FKs resolved (`load_dimensions.py` → `load_fact.py`).
 - `FactSales` is keyed by `sale_line_id`, which is unique per row and enforces the declared grain.
+
+## 6. Pipeline Diagram
+
+![ETL Pipeline Diagram](docs/pipeline_diagram_lab2.drawio.png)
 
 ## 8. Execution Instructions
 
